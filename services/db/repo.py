@@ -45,6 +45,27 @@ class Repo:
         # Supabase read optional (not required for local-first)
         return None
 
+    def list_jobs(self) -> list[dict]:
+        outputs = Path(self.data_dir) / "outputs"
+        if not outputs.exists():
+            return []
+        jobs = []
+        for d in sorted(outputs.iterdir(), reverse=True):
+            jf = d / "job.json"
+            if jf.exists():
+                jobs.append(json.loads(jf.read_text(encoding="utf-8")))
+        return jobs
+
+    def load_events(self, job_id: str) -> list[dict]:
+        p = Path(self.data_dir) / "outputs" / job_id / "events.jsonl"
+        if not p.exists():
+            return []
+        events = []
+        for line in p.read_text(encoding="utf-8").strip().splitlines():
+            if line.strip():
+                events.append(json.loads(line))
+        return events
+
     def save_model_manifest(self, job_id: str, manifest: dict) -> None:
         # local file
         out_dir = Path(self.data_dir) / "outputs" / job_id
