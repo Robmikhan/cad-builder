@@ -5,9 +5,11 @@ from pathlib import Path
 from services.models.hf_downloader import HFModelRef, download
 from services.models.versioning import write_manifest
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 class ModelManager:
     def __init__(self):
-        self.cfg = yaml.safe_load(Path("configs/models.yaml").read_text(encoding="utf-8"))
+        self.cfg = yaml.safe_load((_PROJECT_ROOT / "configs/models.yaml").read_text(encoding="utf-8"))
         self.cache_dir = self.cfg["defaults"]["cache_dir"]
 
     def status(self) -> dict:

@@ -5,8 +5,10 @@ from services.pipelines.registry import STEP_REGISTRY
 from services.db.repo import Repo
 from services.models.model_manager import ModelManager
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 def load_pipelines():
-    cfg = yaml.safe_load(Path("configs/pipelines.yaml").read_text(encoding="utf-8"))
+    cfg = yaml.safe_load((_PROJECT_ROOT / "configs/pipelines.yaml").read_text(encoding="utf-8"))
     return cfg["pipelines"]
 
 def run_job_pipeline(job_id: str, repo: Repo) -> None:
