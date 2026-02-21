@@ -3,6 +3,7 @@ from pathlib import Path
 
 from services.vision.sf3d_runner import run_sf3d
 from services.vision.triposr_runner import run_triposr
+from services.vision.instantmesh_runner import run_instantmesh
 from services.vision.scale_mesh import scale_mesh_to_mm
 
 
@@ -11,12 +12,16 @@ def step_03_reconstruct_mesh(job: dict, ctx: dict, repo):
     mesh_out_dir = out_dir / "mesh"
     mesh_out_dir.mkdir(parents=True, exist_ok=True)
 
-    inputs = job["part_spec"].get("inputs") or {}
-    image_paths = inputs.get("image_paths") or []
-    if not image_paths:
-        raise RuntimeError("IMAGE mode requires part_spec.inputs.image_paths")
-
-    img = image_paths[0]
+    # Prefer cleaned images from step_02 (background removed), fall back to originals
+    segmented = ctx.get("segmented_images")
+    if segmented:
+        img = segmented[0]
+    else:
+        inputs = job["part_spec"].get("inputs") or {}
+        image_paths = inputs.get("image_paths") or []
+        if not image_paths:
+            raise RuntimeError("IMAGE mode requires part_spec.inputs.image_paths")
+        img = image_paths[0]
 
     errors = []
     mesh_path = None
@@ -35,8 +40,15 @@ def step_03_reconstruct_mesh(job: dict, ctx: dict, repo):
             errors.append(f"triposr: {e}")
 
     if not mesh_path:
-        repo.event(job["job_id"], "mesh_recon_failed", {"errors": errors[:3]})
-        raise RuntimeError("Mesh reconstruction failed. " + " | ".join(errors[:2]))
+        try:
+            mesh_path = run_instantmesh(img, str(mesh_out_dir))
+            repo.event(job["job_id"], "mesh_recon_ok", {"provider": "instantmesh", "mesh_path": mesh_path})
+        except Exception as e:
+            errors.append(f"instantmesh: {e}")
+
+    if not mesh_path:
+        repo.event(job["job_id"], "mesh_recon_failed", {"errors": errors[:4]})
+        raise RuntimeError("Mesh reconstruction failed. " + " | ".join(errors[:3]))
 
     # Optional scaling
     spec = job["part_spec"]
