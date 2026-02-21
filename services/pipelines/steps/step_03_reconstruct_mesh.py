@@ -44,6 +44,13 @@ def step_03_reconstruct_mesh(job: dict, ctx: dict, repo):
     target_mm = float(scale_ref.get("value_mm") or 0.0)
 
     if target_mm > 0:
+        kind = (scale_ref.get("kind") or "KNOWN_DIMENSION").upper().strip()
+        if kind == "SCALE_BAR":
+            raise NotImplementedError(
+                "SCALE_BAR mode is not yet implemented. "
+                "Please use kind=KNOWN_DIMENSION with an explicit value_mm and dimension_name."
+            )
+
         # Choose axis: if dimension_name is provided and matches L/W/H, map to X/Y/Z.
         dim_name = (scale_ref.get("dimension_name") or "").upper().strip()
         axis = "X"

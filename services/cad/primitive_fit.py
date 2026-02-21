@@ -16,6 +16,7 @@ class CylinderCut:
 @dataclass
 class PrimitiveFitResult:
     bbox_LWH: Tuple[float, float, float]
+    bbox_center: Tuple[float, float, float]
     cylinders: List[CylinderCut]
     notes: List[str]
 
@@ -24,15 +25,71 @@ def _axis_index(axis: str) -> int:
     return {"X": 0, "Y": 1, "Z": 2}[axis]
 
 
-def fit_primitives(mesh_path: str, max_cylinders: int = 8) -> PrimitiveFitResult:
+def _ransac_circle_2d(
+    uv: np.ndarray,
+    rng: np.random.RandomState,
+    iters: int = 800,
+    dist_thresh: float = 0.35,
+    min_inliers: int = 80,
+    radius_range: Optional[Tuple[float, float]] = None,
+) -> Optional[Tuple[np.ndarray, float, np.ndarray]]:
+    """Simple 2D RANSAC circle fit. Returns (center, radius, inlier_mask) or None."""
+    n = uv.shape[0]
+    if n < min_inliers:
+        return None
+
+    best_inliers = 0
+    best = None
+    idxs = np.arange(n)
+
+    for _ in range(iters):
+        i1, i2, i3 = rng.choice(idxs, 3, replace=False)
+        p1, p2, p3 = uv[i1], uv[i2], uv[i3]
+        x1, y1 = p1
+        x2, y2 = p2
+        x3, y3 = p3
+        det = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2))
+        if abs(det) < 1e-9:
+            continue
+        ux = (
+            (x1 * x1 + y1 * y1) * (y2 - y3)
+            + (x2 * x2 + y2 * y2) * (y3 - y1)
+            + (x3 * x3 + y3 * y3) * (y1 - y2)
+        ) / det
+        uy = (
+            (x1 * x1 + y1 * y1) * (x3 - x2)
+            + (x2 * x2 + y2 * y2) * (x1 - x3)
+            + (x3 * x3 + y3 * y3) * (x2 - x1)
+        ) / det
+        center = np.array([ux, uy], dtype=float)
+        r = float(np.linalg.norm(p1 - center))
+        if radius_range is not None:
+            rmin, rmax = radius_range
+            if not (rmin <= r <= rmax):
+                continue
+        d = np.linalg.norm(uv - center, axis=1)
+        inlier_mask = np.abs(d - r) <= dist_thresh
+        cnt = int(inlier_mask.sum())
+        if cnt > best_inliers:
+            best_inliers = cnt
+            best = (center, r, inlier_mask)
+
+    if best is None or best_inliers < min_inliers:
+        return None
+    return best
+
+
+def fit_primitives(mesh_path: str, max_cylinders: int = 8, seed: int = 42) -> PrimitiveFitResult:
     """
     Heuristic primitive fitting:
     - Use mesh AABB for main body L/W/H
-    - Detect cylindrical holes by slicing + circle fitting on vertex projections
+    - Detect cylindrical holes via 2D RANSAC circle fitting on vertex projections
     This is intentionally conservative and not perfect, but works well on many parts.
 
     Returns cylinders aligned to primary axes only.
     """
+    rng = np.random.RandomState(seed)
+
     m = trimesh.load(mesh_path, force="mesh")
     if m.is_empty:
         raise RuntimeError(f"Empty mesh: {mesh_path}")
@@ -55,52 +112,42 @@ def fit_primitives(mesh_path: str, max_cylinders: int = 8) -> PrimitiveFitResult
 
     verts = np.asarray(m.vertices)
 
+    rmax = 0.45 * float(np.max(dims))
+    rmin = max(0.5, 0.01 * float(np.max(dims)))
+
     for axis in axes_to_try:
         if len(cylinders) >= max_cylinders:
             break
 
         ai = _axis_index(axis)
-        # Project vertices onto the plane perpendicular to axis: (u, v)
         uv_axes = [i for i in [0, 1, 2] if i != ai]
-        uv = verts[:, uv_axes]  # Nx2
+        working_uv = verts[:, uv_axes].copy()
 
-        # Cluster projected points to find repeated circular features.
-        # Fast heuristic: use k-means-like binning by radius from centroid of full cloud.
-        centroid = uv.mean(axis=0)
-        r = np.linalg.norm(uv - centroid, axis=1)
-
-        # Look for strong radius modes: histogram peaks (candidate circles)
-        hist, bin_edges = np.histogram(r, bins=80)
-        peak_idxs = np.argsort(hist)[::-1][:10]  # top peaks
-        tried_radii = set()
-
-        for pi in peak_idxs:
-            if len(cylinders) >= max_cylinders:
+        for _ in range(max_cylinders - len(cylinders)):
+            fit = _ransac_circle_2d(
+                working_uv,
+                rng,
+                iters=800,
+                dist_thresh=max(0.3, 0.005 * float(np.max(dims))),
+                min_inliers=max(80, int(0.02 * len(working_uv))),
+                radius_range=(rmin, rmax),
+            )
+            if fit is None:
                 break
-            count = int(hist[pi])
-            if count < 150:  # ignore tiny peaks (tuneable)
-                continue
-
-            rad = float(0.5 * (bin_edges[pi] + bin_edges[pi + 1]))
-            # Avoid duplicates
-            key = round(rad, 2)
-            if key in tried_radii:
-                continue
-            tried_radii.add(key)
-
-            # Candidate: circle centered near centroid, radius=rad
-            # Sanity checks: radius should be reasonable relative to bbox
-            if rad < 0.5 or rad > max(L, W, H) * 0.45:
-                continue
-
+            center, radius, inlier_mask = fit
             cylinders.append(
                 CylinderCut(
                     axis=axis,
-                    radius=rad,
-                    center=(float(centroid[0]), float(centroid[1])),
+                    radius=float(radius),
+                    center=(float(center[0]), float(center[1])),
                     through=True,
                 )
             )
+            # Remove inliers to find next circle
+            keep = ~inlier_mask
+            if int(keep.sum()) < 50:
+                break
+            working_uv = working_uv[keep]
 
         if cylinders:
             notes.append(f"Detected {len(cylinders)} cylinder candidates along axis {axis}.")
@@ -109,4 +156,10 @@ def fit_primitives(mesh_path: str, max_cylinders: int = 8) -> PrimitiveFitResult
     if not cylinders:
         notes.append("No cylinders confidently detected; falling back to bbox-only CAD.")
 
-    return PrimitiveFitResult(bbox_LWH=(L, W, H), cylinders=cylinders, notes=notes)
+    bbox_mid = (bounds[0] + bounds[1]) / 2.0
+    return PrimitiveFitResult(
+        bbox_LWH=(L, W, H),
+        bbox_center=(float(bbox_mid[0]), float(bbox_mid[1]), float(bbox_mid[2])),
+        cylinders=cylinders,
+        notes=notes,
+    )

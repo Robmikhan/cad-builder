@@ -33,6 +33,7 @@ class AxisCylinder:
 @dataclass
 class PrimitiveFitO3DResult:
     bbox_LWH: Tuple[float, float, float]
+    bbox_center: Tuple[float, float, float]
     planes: List[Plane]
     cylinders: List[AxisCylinder]
     notes: List[str]
@@ -127,6 +128,7 @@ def _project_uv(points: np.ndarray, axis: str) -> np.ndarray:
 
 def _ransac_circle_uv(
     uv: np.ndarray,
+    rng: np.random.RandomState,
     iters: int = 1200,
     dist_thresh: float = 0.35,
     min_inliers: int = 1200,
@@ -148,7 +150,7 @@ def _ransac_circle_uv(
 
     for _ in range(iters):
         # sample 3 non-collinear points
-        i1, i2, i3 = np.random.choice(idxs, 3, replace=False)
+        i1, i2, i3 = rng.choice(idxs, 3, replace=False)
         p1, p2, p3 = uv[i1], uv[i2], uv[i3]
 
         # Compute circumcenter
@@ -196,6 +198,7 @@ def fit_primitives_open3d(
     n_points: int = 70000,
     max_planes: int = 3,
     max_cylinders: int = 6,
+    seed: int = 42,
 ) -> PrimitiveFitO3DResult:
     """
     Open3D-driven primitive fitting:
@@ -203,6 +206,7 @@ def fit_primitives_open3d(
     - cylinders: via custom 2D circle RANSAC on UV projections, axis chosen by dominant plane/thin dimension
     """
     _require_o3d()
+    rng = np.random.RandomState(seed)
     pcd = _load_mesh_as_pcd(mesh_path, n_points=n_points, voxel=voxel)
     L, W, H = _aabb_dims(pcd)
     notes: List[str] = [f"AABB dims: L={L:.2f}, W={W:.2f}, H={H:.2f} (scaled units)"]
@@ -243,6 +247,7 @@ def fit_primitives_open3d(
     for k in range(max_cylinders):
         fit = _ransac_circle_uv(
             working_uv,
+            rng,
             iters=1200,
             dist_thresh=max(0.25, voxel * 0.6),
             min_inliers=max(900, int(0.02 * len(working_uv))),
@@ -266,4 +271,13 @@ def fit_primitives_open3d(
     if not cylinders:
         notes.append("No cylinders found with Open3D RANSAC; consider providing a cleaner image, more points, or scaling.")
 
-    return PrimitiveFitO3DResult(bbox_LWH=(L, W, H), planes=planes, cylinders=cylinders, notes=notes)
+    aabb = pcd.get_axis_aligned_bounding_box()
+    aabb_center = aabb.get_center()
+    bbox_center = (float(aabb_center[0]), float(aabb_center[1]), float(aabb_center[2]))
+    return PrimitiveFitO3DResult(
+        bbox_LWH=(L, W, H),
+        bbox_center=bbox_center,
+        planes=planes,
+        cylinders=cylinders,
+        notes=notes,
+    )
