@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
-import { Box, LayoutDashboard, PlusCircle, Settings, Cpu } from 'lucide-react'
+import { Box, LayoutDashboard, PlusCircle, Cpu } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import NewJob from './pages/NewJob'
 import JobDetail from './pages/JobDetail'

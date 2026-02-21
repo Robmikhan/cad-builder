@@ -24,6 +24,8 @@ def run_job_pipeline(job_id: str, repo: Repo) -> None:
     try:
         pipelines = load_pipelines()
         mode = job["part_spec"]["mode"]
+        if mode not in pipelines:
+            raise ValueError(f"Unknown pipeline mode '{mode}'. Valid modes: {list(pipelines.keys())}")
         steps = pipelines[mode]["steps"]
 
         # model manifest snapshot

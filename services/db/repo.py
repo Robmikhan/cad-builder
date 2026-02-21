@@ -1,9 +1,12 @@
 from __future__ import annotations
 import json
+import logging
 import os
 from pathlib import Path
 from datetime import datetime, timezone
 import requests
+
+_log = logging.getLogger(__name__)
 
 class Repo:
     """
@@ -53,7 +56,10 @@ class Repo:
         for d in sorted(outputs.iterdir(), reverse=True):
             jf = d / "job.json"
             if jf.exists():
-                jobs.append(json.loads(jf.read_text(encoding="utf-8")))
+                try:
+                    jobs.append(json.loads(jf.read_text(encoding="utf-8")))
+                except (json.JSONDecodeError, OSError) as e:
+                    _log.warning("Skipping corrupted job file %s: %s", jf, e)
         return jobs
 
     def load_events(self, job_id: str) -> list[dict]:

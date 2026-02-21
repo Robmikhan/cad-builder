@@ -10,6 +10,7 @@ segmentation:
     kind: "segment"
     source: "facebookresearch/segment-anything"
     revision: "main"
+    license_key: "apache-2.0"
 
 reconstruction:
   image_to_mesh:
@@ -19,16 +20,19 @@ reconstruction:
         kind: "img2mesh"
         source: "stabilityai/stable-fast-3d"
         revision: "main"
+        license_key: "stability-community"
       - name: "triposr"
         provider: "huggingface"
         kind: "img2mesh"
         source: "stabilityai/TripoSR"
         revision: "main"
+        license_key: "mit"
       - name: "instantmesh"
         provider: "huggingface"
         kind: "img2mesh"
         source: "TencentARC/InstantMesh"
         revision: "space"
+        license_key: "apache-2.0"
 
   text_or_multiview_to_mesh:
     candidates:
@@ -37,6 +41,7 @@ reconstruction:
         kind: "txt2mesh"
         source: "tencent/Hunyuan3D-2"
         revision: "main"
+        license_key: "tencent-hunyuan"
 
   video_to_pointcloud:
     name: "colmap"
@@ -44,6 +49,7 @@ reconstruction:
     kind: "vid2pcd"
     source: "colmap/colmap"
     revision: "main"
+    license_key: "bsd-3-clause"
 
 cad_generation:
   image_to_cad:
@@ -52,18 +58,21 @@ cad_generation:
     kind: "img2cad"
     source: "anniedoris/CAD-Coder"
     revision: "main"
+    license_key: "mit"
   text_to_cad:
     name: "text2cad"
     provider: "github"
     kind: "txt2cad"
     source: "SadilKhan/Text2CAD"
     revision: "main"
+    license_key: "mit"
   pointcloud_to_cad:
     name: "point2cad"
     provider: "github"
     kind: "pcd2cad"
     source: "prs-eth/point2cad"
     revision: "main"
+    license_key: "mit"
 
 cad_kernel:
   primary:
@@ -72,3 +81,4 @@ cad_kernel:
     kind: "cad_kernel"
     source: "FreeCAD"
     revision: "stable"
+    license_key: "lgpl-2.1"
