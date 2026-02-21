@@ -1,0 +1,5 @@
+def step_04_video_recon_colmap(job: dict, ctx: dict, repo):
+    # Pluggable video->pointcloud using COLMAP
+    # Expected output: ctx["pointcloud_path"]
+    repo.event(job["job_id"], "colmap_stub", {"note": "COLMAP step is pluggable; install colmap and wire runner."})
+    return ctx

@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.uv/
+.pytest_cache/
+
+# OS
+.DS_Store
+
+# Data / artifacts
+data/cache/
+data/inputs/
+data/outputs/
+*.zip
+
+# Env
+.env
+
+# IDE
+.vscode/
+.idea/

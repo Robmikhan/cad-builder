@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cad_program.schema.json",
+  "type": "object",
+  "required": ["language", "source", "parameters"],
+  "properties": {
+    "language": { "type": "string", "enum": ["CADQUERY_PY", "FREECAD_PY", "OPENSCAD"] },
+    "source": { "type": "string" },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": { "type": "number" }
+    },
+    "exports": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["STEP", "STL", "GLB", "OBJ"] }
+    }
+  },
+  "additionalProperties": false
+}

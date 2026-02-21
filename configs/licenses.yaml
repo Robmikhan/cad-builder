@@ -1,0 +1,10 @@
+licenses:
+  sf3d:
+    key: "stability-community"
+    notes: "Stable Fast 3D uses a community license; verify commercial revenue threshold."
+  triposr:
+    key: "hf-model-card"
+    notes: "See HF model card."
+  hunyuan3d:
+    key: "open-source"
+    notes: "See upstream repo and model card."

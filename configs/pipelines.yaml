@@ -1,0 +1,30 @@
+pipelines:
+  PROMPT:
+    steps:
+      - step_00_ingest
+      - step_01_preflight
+      - step_08_text_to_cad
+      - step_09_validate_and_repair
+      - step_10_export_step
+      - step_11_bundle_and_report
+
+  IMAGE:
+    steps:
+      - step_00_ingest
+      - step_01_preflight
+      - step_02_segment
+      - step_03_reconstruct_mesh
+      - step_07_image_to_cad
+      - step_09_validate_and_repair
+      - step_10_export_step
+      - step_11_bundle_and_report
+
+  VIDEO:
+    steps:
+      - step_00_ingest
+      - step_01_preflight
+      - step_04_video_recon_colmap
+      - step_06_pointcloud_to_cad
+      - step_09_validate_and_repair
+      - step_10_export_step
+      - step_11_bundle_and_report

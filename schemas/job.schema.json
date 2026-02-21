@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "job.schema.json",
+  "type": "object",
+  "required": ["job_id", "status", "created_at", "part_spec"],
+  "properties": {
+    "job_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["QUEUED", "RUNNING", "FAILED", "DONE"] },
+    "created_at": { "type": "string" },
+    "part_spec": { "$ref": "part_spec.schema.json" },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "mesh_path": { "type": "string" },
+        "cad_script_path": { "type": "string" },
+        "step_path": { "type": "string" },
+        "report_path": { "type": "string" },
+        "bundle_path": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "runtime_sec": { "type": "number" },
+        "num_iterations": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "error": { "type": "string" }
+  },
+  "additionalProperties": false
+}

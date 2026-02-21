@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "part_spec.schema.json",
+  "type": "object",
+  "required": ["part_name", "mode", "units", "tolerance_mm"],
+  "properties": {
+    "part_name": { "type": "string" },
+    "mode": { "type": "string", "enum": ["PROMPT", "IMAGE", "VIDEO"] },
+    "units": { "type": "string", "enum": ["mm", "inch"] },
+    "tolerance_mm": { "type": "number", "minimum": 0.01, "maximum": 1.0 },
+    "use_case": { "type": "string", "maxLength": 5000 },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": { "type": "number" }
+    },
+    "materials": {
+      "type": "object",
+      "properties": {
+        "material": { "type": "string" },
+        "process": { "type": "string", "enum": ["3D_PRINT", "CNC", "LASER", "UNKNOWN"] }
+      },
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "image_paths": { "type": "array", "items": { "type": "string" } },
+        "video_path": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "must_be_parametric": { "type": "boolean", "default": true },
+        "max_features": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "symmetry_hint": { "type": "string", "enum": ["NONE", "X", "Y", "Z", "XY", "XZ", "YZ"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

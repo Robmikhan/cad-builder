@@ -1,0 +1,12 @@
+upgrade_policy:
+  cadence_days: 14
+  allow_auto_upgrade_in_prod: false
+  auto_open_pr: false
+  hf_discovery:
+    enabled: true
+    pipeline_tags:
+      - "image-to-3d"
+  rules:
+    - if_new_model_score_beats_baseline_by: 0.10
+      then: "stage_candidate"
+    - if_license_unknown: "block"

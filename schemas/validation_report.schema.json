@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "validation_report.schema.json",
+  "type": "object",
+  "required": ["valid_syntax", "solid_ok", "issues", "suggested_fixes"],
+  "properties": {
+    "valid_syntax": { "type": "boolean" },
+    "solid_ok": { "type": "boolean" },
+    "dimension_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "expected", "observed", "delta"],
+        "properties": {
+          "name": { "type": "string" },
+          "expected": { "type": "number" },
+          "observed": { "type": "number" },
+          "delta": { "type": "number" }
+        }
+      }
+    },
+    "issues": { "type": "array", "items": { "type": "string" } },
+    "suggested_fixes": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

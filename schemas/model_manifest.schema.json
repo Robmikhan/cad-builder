@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model_manifest.schema.json",
+  "type": "object",
+  "required": ["models"],
+  "properties": {
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "provider", "kind", "source", "revision", "local_dir", "license_key"],
+        "properties": {
+          "name": { "type": "string" },
+          "provider": { "type": "string", "enum": ["huggingface", "github", "local"] },
+          "kind": { "type": "string" },
+          "source": { "type": "string" },
+          "revision": { "type": "string" },
+          "local_dir": { "type": "string" },
+          "license_key": { "type": "string" },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,3 @@
+observability:
+  log_json: true
+  store_events: true

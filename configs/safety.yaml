@@ -1,0 +1,4 @@
+safety:
+  max_repair_iters: 5
+  refuse_regulated_design_help: true
+  note: "Generic CAD pipeline. End user must comply with laws and platform policies."

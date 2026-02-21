@@ -1,0 +1,74 @@
+defaults:
+  device: "cuda"
+  dtype: "fp16"
+  cache_dir: "data/cache/models"
+
+segmentation:
+  primary:
+    name: "sam2"
+    provider: "github"
+    kind: "segment"
+    source: "facebookresearch/segment-anything"
+    revision: "main"
+
+reconstruction:
+  image_to_mesh:
+    candidates:
+      - name: "sf3d"
+        provider: "huggingface"
+        kind: "img2mesh"
+        source: "stabilityai/stable-fast-3d"
+        revision: "main"
+      - name: "triposr"
+        provider: "huggingface"
+        kind: "img2mesh"
+        source: "stabilityai/TripoSR"
+        revision: "main"
+      - name: "instantmesh"
+        provider: "huggingface"
+        kind: "img2mesh"
+        source: "TencentARC/InstantMesh"
+        revision: "space"
+
+  text_or_multiview_to_mesh:
+    candidates:
+      - name: "hunyuan3d"
+        provider: "huggingface"
+        kind: "txt2mesh"
+        source: "tencent/Hunyuan3D-2"
+        revision: "main"
+
+  video_to_pointcloud:
+    name: "colmap"
+    provider: "github"
+    kind: "vid2pcd"
+    source: "colmap/colmap"
+    revision: "main"
+
+cad_generation:
+  image_to_cad:
+    name: "cad-coder"
+    provider: "github"
+    kind: "img2cad"
+    source: "anniedoris/CAD-Coder"
+    revision: "main"
+  text_to_cad:
+    name: "text2cad"
+    provider: "github"
+    kind: "txt2cad"
+    source: "SadilKhan/Text2CAD"
+    revision: "main"
+  pointcloud_to_cad:
+    name: "point2cad"
+    provider: "github"
+    kind: "pcd2cad"
+    source: "prs-eth/point2cad"
+    revision: "main"
+
+cad_kernel:
+  primary:
+    name: "freecad"
+    provider: "local"
+    kind: "cad_kernel"
+    source: "FreeCAD"
+    revision: "stable"
