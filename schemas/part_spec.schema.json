@@ -38,6 +38,20 @@
         "symmetry_hint": { "type": "string", "enum": ["NONE", "X", "Y", "Z", "XY", "XZ", "YZ"] }
       },
       "additionalProperties": false
+    },
+    "scale_reference": {
+      "type": "object",
+      "description": "Optional: provide one real measurement to scale reconstructed mesh.",
+      "required": ["kind", "value_mm"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["KNOWN_DIMENSION", "SCALE_BAR"] },
+        "value_mm": { "type": "number", "minimum": 0.1 },
+        "dimension_name": {
+          "type": "string",
+          "description": "If kind=KNOWN_DIMENSION: name of the dimension in dimensions{} you want to use (e.g. 'L')."
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false
