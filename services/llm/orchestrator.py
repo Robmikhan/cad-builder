@@ -68,31 +68,64 @@ RULES:
 1. Use `import cadquery as cq` at the top
 2. Store the final shape in a variable called `result`
 3. Use named parameters (L, W, H, radius, etc.) at the top for easy editing
-4. Keep it simple and manufacturable — prefer boxes, cylinders, fillets, chamfers, holes
-5. Use `.box()`, `.cylinder()`, `.hole()`, `.fillet()`, `.chamfer()`, `.cut()`, `.union()` etc.
-6. All dimensions in {part_spec.get('units', 'mm')}
-7. Output ONLY the Python code, no explanations
+4. Keep it simple and manufacturable
+5. All dimensions in {part_spec.get('units', 'mm')}
+6. Output ONLY the Python code, no explanations
 
-Example format:
+CADQUERY API REFERENCE (use ONLY these methods):
+- `cq.Workplane("XY")` — start on XY, XZ, or YZ plane
+- `.box(length, width, height)` — centered box, NO keyword args
+- `.cylinder(height, radius)` — centered cylinder
+- `.sphere(radius)` — sphere
+- `.hole(diameter)` — through-hole on current workplane
+- `.cboreHole(diameter, cboreDiameter, cboreDepth)` — counterbore hole
+- `.rect(width, height)` / `.circle(radius)` — 2D sketch
+- `.extrude(distance)` — extrude sketch
+- `.cut(other_solid)` — boolean subtract
+- `.union(other_solid)` — boolean add
+- `.fillet(radius)` — fillet selected edges
+- `.chamfer(distance)` — chamfer edges
+- `.faces(">Z")` / `.faces("<Z")` — select faces by direction
+- `.edges("|Z")` / `.edges(">X")` — select edges
+- `.workplane()` — new workplane on selected face, NO keyword args
+- `.center(x, y)` — offset workplane origin
+- `.move(x, y)` / `.moveTo(x, y)` — move sketch cursor
+- `.transformed(offset=(x,y,z))` — offset workplane by vector
+
+DO NOT use:
+- `.workplane(centered=...)` — INVALID, `workplane()` takes no `centered` arg
+- `.workplane(centerX=...)` — INVALID
+- `.translate(...)` on Workplane — use `.val().translate()` for Shape
+
+For L-shapes, use `.extrude()` on an L-shaped sketch or `.union()` two boxes.
+
+Example (bracket with holes and fillet):
 ```python
 import cadquery as cq
 
-# Parameters
-L = 40.0
-W = 25.0
-H = 12.0
-hole_d = 5.0
-fillet_r = 2.0
+L = 60.0
+W = 40.0
+H = 30.0
+thickness = 5.0
+hole_d = 5.5
+fillet_r = 3.0
 
+# L-shape via sketch
 result = (
     cq.Workplane("XY")
-    .box(L, W, H)
-    .faces(">Z")
-    .workplane()
-    .hole(hole_d)
-    .edges("|Z")
-    .fillet(fillet_r)
+    .moveTo(0, 0)
+    .rect(L, thickness, centered=False)
+    .extrude(W)
 )
+vertical = (
+    cq.Workplane("XY")
+    .moveTo(0, 0)
+    .rect(thickness, H, centered=False)
+    .extrude(W)
+)
+result = result.union(vertical)
+result = result.faces(">Z").workplane().center(L/2, W/2).hole(hole_d)
+result = result.faces(">X").workplane().center(W/2, H/2).hole(hole_d)
 ```"""
 
     try:
