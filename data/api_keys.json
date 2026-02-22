@@ -1,0 +1,10 @@
+{
+  "cad_trial_3f115ecae49375781daf1b2d89e004cd": {
+    "tier": "free_trial",
+    "email": "test@example.com",
+    "created_at": "2026-02-22T08:19:05.492355+00:00",
+    "expires_at": "2026-03-08T08:19:05.492355+00:00",
+    "jobs_this_month": 0,
+    "month_reset": "2026-02"
+  }
+}

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchJobs } from '../api'
+import { fetchJobs, fetchUsage } from '../api'
 import {
   Clock, CheckCircle2, XCircle, Loader2, RefreshCw,
-  ArrowRight, Box, Layers
+  ArrowRight, Box, Layers, AlertTriangle, Crown
 } from 'lucide-react'
 
 const STATUS_CONFIG = {
@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [usage, setUsage] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -56,7 +57,12 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    if (localStorage.getItem('cad_api_key')) {
+      fetchUsage().then(setUsage).catch(() => {})
+    }
+  }, [])
 
   // Auto-refresh every 5s if any jobs are running
   useEffect(() => {
@@ -104,6 +110,30 @@ export default function Dashboard() {
         <StatCard label="In Progress" value={counts.running} icon={Loader2} accent="bg-blue-500/20 text-blue-400" />
         <StatCard label="Failed" value={counts.failed} icon={XCircle} accent="bg-red-500/20 text-red-400" />
       </div>
+
+      {/* Quota Warning */}
+      {usage && usage.jobs_remaining <= Math.ceil(usage.jobs_limit * 0.2) && usage.jobs_remaining > 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 rounded-lg p-4 mb-6 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>You've used {usage.jobs_used} of {usage.jobs_limit} jobs this month ({usage.tier_label} plan).</span>
+          </div>
+          <Link to="/pricing" className="flex items-center gap-1 text-yellow-200 hover:text-white text-xs font-medium shrink-0">
+            <Crown className="w-3.5 h-3.5" /> Upgrade
+          </Link>
+        </div>
+      )}
+      {usage && usage.jobs_remaining === 0 && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-300 rounded-lg p-4 mb-6 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <XCircle className="w-4 h-4 shrink-0" />
+            <span>Monthly quota reached ({usage.jobs_limit} jobs). Upgrade to continue creating jobs.</span>
+          </div>
+          <Link to="/pricing" className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white rounded-lg px-3 py-1.5 text-xs font-medium shrink-0">
+            <Crown className="w-3.5 h-3.5" /> Upgrade Now
+          </Link>
+        </div>
+      )}
 
       {/* Error */}
       {error && (

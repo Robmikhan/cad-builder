@@ -15,6 +15,7 @@ from services.api.routes_assets import router as assets_router
 from services.api.routes_models import router as models_router
 from services.api.routes_upload import router as upload_router
 from services.api.routes_stream import router as stream_router
+from services.api.routes_billing import router as billing_router
 
 app = FastAPI(title="CAD Builder", version="0.2.0", description="Prompt/Image → Parametric CAD → STEP")
 
@@ -36,6 +37,7 @@ app.include_router(assets_router, prefix="/api/assets", tags=["assets"])
 app.include_router(models_router, prefix="/api/models", tags=["models"])
 app.include_router(upload_router, prefix="/api/upload", tags=["upload"])
 app.include_router(stream_router, prefix="/api/jobs", tags=["streaming"])
+app.include_router(billing_router, prefix="/api", tags=["billing"])
 
 _START_TIME = time.time()
 

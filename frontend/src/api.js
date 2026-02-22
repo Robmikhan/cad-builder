@@ -74,6 +74,31 @@ export async function fetchHealth() {
   return res.json();
 }
 
+export async function fetchTiers() {
+  const res = await fetch(`${BASE}/tiers`);
+  if (!res.ok) throw new Error(`Failed to fetch tiers: ${res.status}`);
+  return res.json();
+}
+
+export async function requestTrial(email = '') {
+  const res = await fetch(`${BASE}/trial`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Trial request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchUsage() {
+  const res = await fetch(`${BASE}/usage`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch usage: ${res.status}`);
+  return res.json();
+}
+
 export function downloadBundleUrl(jobId) {
   return `${BASE}/assets/${jobId}/bundle`;
 }

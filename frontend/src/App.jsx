@@ -6,6 +6,7 @@ import JobDetail from './pages/JobDetail'
 import ModelsPage from './pages/ModelsPage'
 import SettingsPage from './pages/SettingsPage'
 import LandingPage from './pages/LandingPage'
+import PricingPage from './pages/PricingPage'
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -60,10 +61,9 @@ function AppShell({ children }) {
 export default function App() {
   const location = useLocation()
 
-  // Landing page renders without sidebar
-  if (location.pathname === '/') {
-    return <LandingPage />
-  }
+  // Full-width pages (no sidebar)
+  if (location.pathname === '/') return <LandingPage />
+  if (location.pathname === '/pricing') return <PricingPage />
 
   return (
     <AppShell>

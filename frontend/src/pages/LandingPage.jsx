@@ -69,13 +69,19 @@ export default function LandingPage() {
               </span>
             )}
             <Link
+              to="/pricing"
+              className="px-4 py-2 rounded-lg text-sm text-text-muted hover:text-text transition-colors"
+            >
+              Pricing
+            </Link>
+            <Link
               to="/dashboard"
               className="px-4 py-2 rounded-lg bg-surface-lighter text-sm text-text-muted hover:text-text transition-colors"
             >
               Dashboard
             </Link>
             <Link
-              to="/new"
+              to="/pricing"
               className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors"
             >
               Get Started

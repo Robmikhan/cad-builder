@@ -2,9 +2,10 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from services.api.deps import get_queue, get_repo
+from services.api.quotas import check_quota, increment_usage
 from services.db.repo import Repo
 from services.workers.queue import LocalQueue
 from services.validation.schemas import validate_part_spec
@@ -28,7 +29,13 @@ def list_jobs(repo: Repo = Depends(get_repo)):
     return repo.list_jobs()
 
 @router.post("")
-def create_job(spec: PartSpecIn, q: LocalQueue = Depends(get_queue), repo: Repo = Depends(get_repo)):
+def create_job(spec: PartSpecIn, request: Request, q: LocalQueue = Depends(get_queue), repo: Repo = Depends(get_repo)):
+    # Quota enforcement
+    api_key = request.headers.get("x-api-key", "")
+    allowed, reason = check_quota(api_key)
+    if not allowed:
+        raise HTTPException(403, reason)
+
     part_spec = spec.model_dump(exclude_none=True)
     validate_part_spec(part_spec)
 
@@ -44,6 +51,10 @@ def create_job(spec: PartSpecIn, q: LocalQueue = Depends(get_queue), repo: Repo 
     }
     repo.save_job(job)
     q.enqueue(job_id)
+
+    # Increment usage counter after successful creation
+    increment_usage(api_key)
+
     return job
 
 @router.get("/{job_id}")

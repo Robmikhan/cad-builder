@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { fetchHealth } from '../api'
+import { Link } from 'react-router-dom'
+import { fetchHealth, fetchUsage } from '../api'
 import {
   Settings, Key, Server, CheckCircle2, XCircle,
-  Loader2, Save, Eye, EyeOff, Trash2
+  Loader2, Save, Eye, EyeOff, Trash2, BarChart3, Crown
 } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -11,11 +12,15 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [health, setHealth] = useState(null)
   const [healthLoading, setHealthLoading] = useState(true)
+  const [usage, setUsage] = useState(null)
 
   useEffect(() => {
     const stored = localStorage.getItem('cad_api_key') || ''
     setApiKey(stored)
     checkHealth()
+    if (stored) {
+      fetchUsage().then(setUsage).catch(() => {})
+    }
   }, [])
 
   const checkHealth = async () => {
@@ -100,6 +105,48 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Usage & Plan */}
+      {usage && (
+        <div className="bg-surface-light border border-border rounded-xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary-400" /> Usage & Plan
+            </h2>
+            <Link to="/pricing" className="text-xs text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-1">
+              <Crown className="w-3.5 h-3.5" /> Upgrade
+            </Link>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="bg-surface rounded-lg p-3">
+              <div className="text-xs text-text-muted mb-1">Plan</div>
+              <div className="text-sm font-semibold">{usage.tier_label}</div>
+            </div>
+            <div className="bg-surface rounded-lg p-3">
+              <div className="text-xs text-text-muted mb-1">Jobs Used</div>
+              <div className="text-sm font-semibold">{usage.jobs_used} / {usage.jobs_limit}</div>
+            </div>
+            <div className="bg-surface rounded-lg p-3">
+              <div className="text-xs text-text-muted mb-1">
+                {usage.days_remaining !== null ? 'Trial Days Left' : 'Remaining'}
+              </div>
+              <div className="text-sm font-semibold">
+                {usage.days_remaining !== null ? `${usage.days_remaining} days` : `${usage.jobs_remaining} jobs`}
+              </div>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div className="w-full bg-surface rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all ${
+                usage.jobs_used / usage.jobs_limit > 0.8 ? 'bg-red-500' :
+                usage.jobs_used / usage.jobs_limit > 0.5 ? 'bg-yellow-500' : 'bg-emerald-500'
+              }`}
+              style={{ width: `${Math.min(100, (usage.jobs_used / usage.jobs_limit) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* API Key */}
       <div className="bg-surface-light border border-border rounded-xl p-5 mb-6">
