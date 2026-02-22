@@ -1,0 +1,10 @@
+{
+  "part_name": "Mounting Bracket",
+  "mode": "PROMPT",
+  "units": "mm",
+  "tolerance_mm": 0.2,
+  "use_case": "An L-shaped mounting bracket with two holes for M5 bolts",
+  "dimensions": {"L": 60.0, "W": 40.0, "H": 30.0},
+  "materials": {"material": "aluminum", "process": "CNC"},
+  "constraints": {"must_be_parametric": true}
+}

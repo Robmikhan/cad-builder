@@ -1,50 +1,128 @@
-# cad-agent — Prompt/Image/Video → Parametric CAD → STEP (Agentic)
+# CAD Builder — Text/Image → Parametric CAD → STEP/STL
 
-This repo is an agentic pipeline that converts:
-- PROMPT (text) OR
-- IMAGE (photos) OR
-- VIDEO (video)
+An agentic pipeline that converts **text descriptions** or **photos** into production-ready parametric CAD files using local AI models.
 
-into:
-1) preview mesh (GLB/OBJ) [IMAGE/VIDEO paths are pluggable]
-2) parametric CAD program (CadQuery or FreeCAD Python)
-3) STEP export (when FreeCAD is installed)
-4) validation report + repair loop
-5) job bundle zip with metadata
+## What It Does
 
-## What works immediately
-- PROMPT pipeline: generates CadQuery parametric script + validates + bundles.
-- STEP export is enabled when FreeCAD is installed (see setup).
+| Input | Pipeline | Output |
+|-------|----------|--------|
+| **Text prompt** | LLM (Ollama) → CadQuery generation → validation + auto-repair → export | STEP, STL, CadQuery source |
+| **Photo** | rembg → TripoSR/InstantMesh mesh → primitive fitting → CadQuery → export | STEP, STL, GLB mesh, CadQuery source |
 
-## What is wired but pluggable
-- IMAGE pipeline steps: segmentation + image->mesh + image->cad
-- VIDEO pipeline steps: COLMAP + pointcloud->cad
-These are implemented as adapters/stubs because local installations differ.
-The code is structured so you can drop in any new HF/GitHub model and set it in configs/models.yaml.
+## Features
 
-## Supabase
-Optional. If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, the API/worker will persist jobs, artifacts, reports, events to Supabase.
-If not set, it uses local JSON files in data/outputs/<job_id>/.
+- **LLM-powered CadQuery generation** — Ollama + qwen2.5-coder:7b generates real parametric CadQuery code from text descriptions
+- **Auto-repair loop** — if validation fails, the LLM automatically fixes the code (up to N attempts)
+- **Background removal** — rembg cleans input photos before mesh reconstruction
+- **3D mesh reconstruction** — SF3D → TripoSR → InstantMesh fallback chain
+- **Sandboxed execution** — CadQuery scripts run in a restricted sandbox (no os/sys/subprocess access)
+- **Web UI** — React dashboard with job management, 3D model preview, drag-and-drop image upload
+- **Real-time streaming** — SSE endpoint for live pipeline progress
+- **API key auth** — optional API key middleware for production deployments
+- **Dual persistence** — local JSON files + optional Supabase cloud sync
+- **GPU-accelerated** — NVIDIA CUDA support for vision models (RTX 3060+ recommended)
 
-See .env.example.
+## Quick Start
 
-## Run
-Linux:
-  bash scripts/setup_linux.sh
-  bash scripts/run_dev.sh
-  bash scripts/run_worker.sh
+```bash
+# 1. Clone and install
+git clone <repo-url> && cd cad-builder
+python -m venv .venv && .venv/Scripts/activate  # Windows
+pip install -e .
 
-## API
-- POST /jobs : create job
-- GET /jobs/{job_id} : job status + artifacts
-- GET /jobs/{job_id}/bundle : download result zip
-- GET /models : list configured models + local availability
+# 2. Install Ollama (for LLM-powered generation)
+winget install Ollama.Ollama
+ollama pull qwen2.5-coder:7b
 
-## Roadmap (built-in hooks)
-- golden set eval harness: services/eval
-- model upgrades: scripts/upgrade_models.sh + configs/upgrade_policy.yaml
-- observability: job_events table + JSON logs
+# 3. Install vision models (for IMAGE pipeline)
+powershell scripts/install_vision_repos.ps1
+
+# 4. Start the API server
+uvicorn services.api.main:app --host 0.0.0.0 --port 8080
+
+# 5. Start the worker (separate terminal)
+python -m services.workers.worker
+
+# 6. Build and serve the frontend
+cd frontend && npm install && npm run build && cd ..
+# Frontend is served automatically at http://localhost:8080
+```
+
+## Docker (GPU)
+
+```bash
+cd docker
+docker compose up --build
+# API + Worker + Frontend at http://localhost:8080
+```
+
+Requires NVIDIA Container Toolkit (`nvidia-docker2`) for GPU support.
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/jobs` | Create a new CAD generation job |
+| `GET` | `/jobs` | List all jobs |
+| `GET` | `/jobs/{id}` | Job status + artifacts |
+| `GET` | `/jobs/{id}/events` | Pipeline event log |
+| `GET` | `/jobs/{id}/stream` | SSE real-time event stream |
+| `POST` | `/upload` | Upload an image file |
+| `GET` | `/assets/{id}/step` | Download STEP file |
+| `GET` | `/assets/{id}/stl` | Download STL file |
+| `GET` | `/assets/{id}/glb` | Download GLB mesh for 3D preview |
+| `GET` | `/assets/{id}/bundle` | Download complete ZIP bundle |
+| `GET` | `/models` | List configured AI models |
+| `GET` | `/health` | Health check |
+
+## Configuration
+
+Copy `.env.example` to `.env` and customize:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CAD_AGENT_API_KEYS` | *(empty = no auth)* | Comma-separated API keys |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_MODEL` | `qwen2.5-coder:7b` | LLM model for CadQuery generation |
+| `LLM_PROVIDER` | `ollama` | Set to `none` to disable LLM |
+| `CAD_AGENT_MAX_REPAIR_ITERS` | `3` | Max LLM repair attempts |
+| `CAD_AGENT_CAD_TIMEOUT_SEC` | `30` | CadQuery execution timeout |
+| `SUPABASE_URL` | *(empty)* | Optional Supabase persistence |
+
+## Architecture
+
+```
+frontend/          React + Tailwind + model-viewer (3D preview)
+services/
+  api/             FastAPI server + auth + SSE streaming
+  cad/             CadQuery runner (sandboxed) + exporters
+  db/              Dual persistence (local JSON + Supabase)
+  llm/             Ollama client + orchestrator (generation + repair)
+  pipelines/       Step-based pipeline engine
+  vision/          SF3D, TripoSR, InstantMesh runners
+  workers/         File-backed queue + worker with crash recovery
+configs/           Pipeline steps, model manifest, observability
+schemas/           JSON Schema validation for all data types
+```
+
+## AI Models Used
+
+| Model | Purpose | VRAM | Status |
+|-------|---------|------|--------|
+| qwen2.5-coder:7b | CadQuery code generation + repair | ~5GB | via Ollama |
+| rembg (U2-Net) | Background removal | ~200MB | Built-in |
+| TripoSR | Image → 3D mesh | ~4GB | GPU required |
+| InstantMesh | Image → 3D mesh (alt) | ~6GB | GPU required |
+| SF3D | Image → 3D mesh (alt) | ~4GB | GPU required |
+
+## Testing
+
+```bash
+python -m pytest tests/ -v     # 29+ unit/integration tests
+python scripts/check_gpu.py     # Verify GPU + model setup
+python scripts/test_llm_pipeline.py  # End-to-end LLM test
+```
 
 ## Safety
-If you use this system for regulated items, you are responsible for legal compliance.
-This repo is generic CAD automation and does not embed weapon-part designs.
+
+This system runs AI-generated code in a sandbox with restricted builtins. Only `cadquery` and `math` imports are permitted. If you use this for regulated items, you are responsible for legal compliance.

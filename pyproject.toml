@@ -1,7 +1,7 @@
 [project]
 name = "cad-agent"
-version = "0.1.0"
-description = "Agentic pipeline: prompt/image/video to parametric CAD and STEP"
+version = "0.2.0"
+description = "Agentic pipeline: prompt/image → parametric CAD (CadQuery) → STEP/STL export with LLM repair"
 requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.111.0",
@@ -10,6 +10,7 @@ dependencies = [
   "python-multipart>=0.0.9",
   "orjson>=3.10.0",
   "jsonschema>=4.22.0",
+  "referencing>=0.35.0",
   "rich>=13.7.0",
   "pyyaml>=6.0.1",
   "requests>=2.32.0",
@@ -19,7 +20,18 @@ dependencies = [
   "shapely>=2.0.0",
   "cadquery>=2.4.0",
   "tenacity>=8.3.0",
-  "open3d>=0.18.0"
+  "open3d>=0.18.0",
+  "Pillow>=10.0.0",
+  "rembg>=2.0.50",
+  "onnxruntime>=1.17.0",
+  "PyMCubes>=0.1.4",
+]
+
+[project.optional-dependencies]
+gpu = [
+  "torch>=2.1.0",
+  "torchvision>=0.16.0",
+  "onnxruntime-gpu>=1.17.0",
 ]
 
 [tool.setuptools.packages.find]

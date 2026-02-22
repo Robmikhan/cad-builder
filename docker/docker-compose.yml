@@ -9,6 +9,14 @@ services:
       - ../data:/app/data
     ports:
       - "8080:8080"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
 
   worker:
     build:
@@ -18,4 +26,15 @@ services:
       - ../.env
     volumes:
       - ../data:/app/data
-    command: ["bash", "scripts/run_worker.sh"]
+    command: ["python", "-m", "services.workers.worker"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy

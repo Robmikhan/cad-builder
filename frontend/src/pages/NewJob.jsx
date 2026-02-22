@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createJob } from '../api'
+import { createJob, uploadImage } from '../api'
 import {
   MessageSquare, Image, Video, Send, Loader2, AlertCircle,
-  Ruler, Box, ArrowLeft
+  Ruler, Box, ArrowLeft, Upload, X
 } from 'lucide-react'
 
 const MODES = [
@@ -44,12 +44,30 @@ export default function NewJob() {
   const [form, setForm] = useState(INITIAL)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef(null)
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
   const setDim = (key, val) => setForm(prev => ({
     ...prev,
     dimensions: { ...prev.dimensions, [key]: val },
   }))
+
+  const handleImageSelect = (file) => {
+    if (!file) return
+    setImageFile(file)
+    const reader = new FileReader()
+    reader.onload = (e) => setImagePreview(e.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  const clearImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -74,12 +92,23 @@ export default function NewJob() {
         if (Object.keys(dims).length > 0) spec.dimensions = dims
       }
 
+      // Upload image first for IMAGE mode
+      if (form.mode === 'IMAGE' && imageFile) {
+        setUploading(true)
+        const uploadResult = await uploadImage(imageFile)
+        setUploading(false)
+        spec.inputs = { image_paths: [uploadResult.path] }
+      } else if (form.mode === 'IMAGE' && !imageFile) {
+        throw new Error('Please upload an image for IMAGE mode')
+      }
+
       const job = await createJob(spec)
       navigate(`/jobs/${job.job_id}`)
     } catch (err) {
       setError(err.message)
     } finally {
       setSubmitting(false)
+      setUploading(false)
     }
   }
 
@@ -208,22 +237,59 @@ export default function NewJob() {
           </section>
         )}
 
-        {/* IMAGE / VIDEO info */}
-        {form.mode !== 'PROMPT' && (
+        {/* IMAGE upload */}
+        {form.mode === 'IMAGE' && (
+          <section>
+            <label className="text-sm font-medium text-text-muted mb-3 block">
+              <Upload className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+              Upload Image
+            </label>
+            <div
+              className="bg-surface-light border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary-500/50 transition-colors cursor-pointer"
+              onClick={() => fileRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+              onDrop={(e) => { e.preventDefault(); handleImageSelect(e.dataTransfer.files[0]) }}
+            >
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleImageSelect(e.target.files[0])}
+              />
+              {imagePreview ? (
+                <div className="relative inline-block">
+                  <img src={imagePreview} alt="Preview" className="max-h-48 rounded-lg mx-auto" />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); clearImage() }}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                  <p className="text-xs text-text-muted mt-3">{imageFile?.name}</p>
+                </div>
+              ) : (
+                <>
+                  <Image className="w-10 h-10 text-text-muted/40 mx-auto mb-3" />
+                  <p className="text-sm text-text-muted">Drag & drop an image or click to browse</p>
+                  <p className="text-xs text-text-muted/60 mt-1">PNG, JPG, WebP supported</p>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-text-muted mt-2">
+              The pipeline will remove the background, reconstruct a 3D mesh, then generate parametric CadQuery code.
+            </p>
+          </section>
+        )}
+
+        {/* VIDEO info */}
+        {form.mode === 'VIDEO' && (
           <div className="bg-surface-light border border-border rounded-xl p-5 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
             <div className="text-sm text-text-muted">
-              <p className="font-medium text-text mb-1">
-                {form.mode === 'IMAGE' ? 'Image Mode' : 'Video Mode'}
-              </p>
-              <p>
-                {form.mode === 'IMAGE'
-                  ? 'After creating the job, the pipeline will reconstruct a 3D mesh from your uploaded image using SF3D/TripoSR, then convert it to parametric CadQuery.'
-                  : 'Video mode uses multi-view reconstruction. Ensure your video covers multiple angles of the part.'}
-              </p>
-              <p className="mt-2 text-yellow-400/80 text-xs">
-                Note: Image/Video pipelines require GPU and vision models to be installed.
-              </p>
+              <p className="font-medium text-text mb-1">Video Mode</p>
+              <p>Video mode uses COLMAP multi-view reconstruction and is not yet fully implemented.</p>
             </div>
           </div>
         )}

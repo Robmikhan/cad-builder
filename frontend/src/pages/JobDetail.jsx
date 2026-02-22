@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { fetchJob, fetchJobEvents, downloadBundleUrl } from '../api'
+import { fetchJob, fetchJobEvents, downloadBundleUrl, downloadStepUrl, downloadStlUrl, glbPreviewUrl } from '../api'
+import '@google/model-viewer'
 import {
   ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   Download, FileCode2, Box, Copy, Check, RefreshCw,
-  ChevronRight, AlertCircle
+  ChevronRight, AlertCircle, Eye, FileDown
 } from 'lucide-react'
 
 const STATUS_CONFIG = {
@@ -115,8 +116,10 @@ export default function JobDetail() {
   const metrics = job.metrics || {}
   const cadScript = artifacts.cad_script_path ? true : false
 
+  const hasGlb = artifacts.mesh_path || artifacts.glb_path
   const TABS = [
     { id: 'overview', label: 'Overview' },
+    { id: '3dpreview', label: '3D Preview', disabled: !hasGlb && job.status !== 'DONE' },
     { id: 'cadscript', label: 'CAD Script' },
     { id: 'events', label: 'Events', count: events.length },
   ]
@@ -146,12 +149,28 @@ export default function JobDetail() {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+          {artifacts.step_path && (
+            <a
+              href={downloadStepUrl(job.job_id)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-lighter text-text hover:text-white text-sm font-medium transition-colors"
+            >
+              <FileDown className="w-4 h-4" /> STEP
+            </a>
+          )}
+          {artifacts.stl_path && (
+            <a
+              href={downloadStlUrl(job.job_id)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-lighter text-text hover:text-white text-sm font-medium transition-colors"
+            >
+              <FileDown className="w-4 h-4" /> STL
+            </a>
+          )}
           {artifacts.bundle_path && (
             <a
               href={downloadBundleUrl(job.job_id)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
             >
-              <Download className="w-4 h-4" /> Download Bundle
+              <Download className="w-4 h-4" /> Bundle
             </a>
           )}
         </div>
@@ -232,6 +251,47 @@ export default function JobDetail() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === '3dpreview' && (
+        <div className="bg-surface-light border border-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Eye className="w-4 h-4 text-primary-400" /> 3D Model Preview
+            </h3>
+            {hasGlb && (
+              <a
+                href={glbPreviewUrl(job.job_id)}
+                download
+                className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
+              >
+                Download GLB
+              </a>
+            )}
+          </div>
+          <div className="h-[500px] bg-surface">
+            {hasGlb ? (
+              <model-viewer
+                src={glbPreviewUrl(job.job_id)}
+                alt={`3D preview of ${spec.part_name || 'part'}`}
+                camera-controls
+                auto-rotate
+                shadow-intensity="1"
+                environment-image="neutral"
+                style={{ width: '100%', height: '100%', backgroundColor: '#0f1117' }}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-text-muted">
+                <Box className="w-12 h-12 mb-3 opacity-30" />
+                <p className="text-sm">
+                  {job.status === 'RUNNING' || job.status === 'QUEUED'
+                    ? 'Generating 3D model...'
+                    : 'No 3D mesh available for this job'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

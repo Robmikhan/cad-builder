@@ -1,0 +1,5 @@
+{
+  "should_succeed": true,
+  "must_contain_in_source": ["cq.Workplane", "hole", "result"],
+  "min_step_file_bytes": 5000
+}

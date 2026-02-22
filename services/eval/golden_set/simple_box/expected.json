@@ -1,0 +1,5 @@
+{
+  "should_succeed": true,
+  "expected_dimensions": {"L": 40.0, "W": 25.0, "H": 12.0},
+  "must_contain_in_source": ["cq.Workplane", "box", "result"]
+}

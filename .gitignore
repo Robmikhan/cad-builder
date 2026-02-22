@@ -19,6 +19,14 @@ data/outputs/
 # Env
 .env
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Uploads
+data/uploads/
+
 # IDE
 .vscode/
 .idea/
+.windsurf/

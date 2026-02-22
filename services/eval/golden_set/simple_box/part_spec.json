@@ -1,0 +1,8 @@
+{
+  "part_name": "Simple Box",
+  "mode": "PROMPT",
+  "units": "mm",
+  "tolerance_mm": 0.2,
+  "use_case": "A simple rectangular box",
+  "dimensions": {"L": 40.0, "W": 25.0, "H": 12.0}
+}
