@@ -5,7 +5,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import FileResponse, JSONResponse
 
 from services.api.auth import ApiKeyMiddleware
 from services.api.rate_limit import RateLimitMiddleware
@@ -40,7 +41,6 @@ _START_TIME = time.time()
 
 
 @app.get("/api/health", tags=["system"])
-@app.get("/health", tags=["system"], include_in_schema=False)
 def health_check():
     """Health check endpoint for monitoring and load balancers."""
     return {
@@ -50,29 +50,21 @@ def health_check():
     }
 
 
-# Serve frontend static files (built React app)
+# ── Serve frontend (built React SPA) ──
+# Strategy: mount the dist folder as static files at "/" (Starlette checks
+# mounts AFTER app routes, so /api/* is never intercepted). A custom 404
+# handler returns index.html for non-API paths (SPA client-side routing).
 _FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
-_API_PREFIXES = ("api", "health", "docs", "openapi.json", "redoc")
 
 if _FRONTEND_DIST.exists() and (_FRONTEND_DIST / "index.html").exists():
-    # Mount Vite's hashed asset bundles under /_assets to avoid conflict with /assets API
-    _assets_dir = _FRONTEND_DIST / "assets"
-    if _assets_dir.exists():
-        app.mount("/_assets", StaticFiles(directory=str(_assets_dir)), name="frontend-assets")
-
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def serve_spa(full_path: str):
-        """Serve the React SPA for all non-API routes."""
-        # Don't intercept API routes
-        first_segment = full_path.split("/")[0] if full_path else ""
-        if first_segment in _API_PREFIXES:
-            from fastapi import HTTPException
-            raise HTTPException(404)
-
-        # Try to serve the exact file from dist
-        file_path = _FRONTEND_DIST / full_path
-        if full_path and file_path.is_file():
-            return FileResponse(str(file_path))
-
-        # SPA fallback: serve index.html for client-side routing
+    @app.exception_handler(404)
+    async def _spa_fallback(request, exc):
+        """Return index.html for non-API 404s (SPA client-side routing)."""
+        path = request.url.path
+        if path.startswith("/api/"):
+            return JSONResponse({"detail": "Not Found"}, status_code=404)
         return FileResponse(str(_FRONTEND_DIST / "index.html"))
+
+    # Mount entire dist folder — serves JS, CSS, images, etc.
+    # This is checked AFTER all app.get/post routes, so API routes are safe.
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="spa")
