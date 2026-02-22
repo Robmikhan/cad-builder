@@ -1,0 +1,18 @@
+# Replace YOUR_DOMAIN with your actual domain (e.g., cadbuilder.io)
+# Caddy automatically provisions SSL certificates via Let's Encrypt.
+#
+# If you don't have a domain yet, use :80 instead of the domain name
+# to serve over plain HTTP on port 80.
+
+{$DOMAIN:localhost} {
+    reverse_proxy api:8080
+    encode gzip
+
+    header {
+        # Security headers
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+}
