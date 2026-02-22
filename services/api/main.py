@@ -51,13 +51,27 @@ def health_check():
 
 # Serve frontend static files (built React app)
 _FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
-if _FRONTEND_DIST.exists():
-    app.mount("/assets", StaticFiles(directory=str(_FRONTEND_DIST / "assets")), name="static-assets")
+_API_PREFIXES = ("jobs", "assets", "models", "upload", "health", "docs", "openapi.json", "redoc")
+
+if _FRONTEND_DIST.exists() and (_FRONTEND_DIST / "index.html").exists():
+    # Mount Vite's hashed asset bundles under /_assets to avoid conflict with /assets API
+    _assets_dir = _FRONTEND_DIST / "assets"
+    if _assets_dir.exists():
+        app.mount("/_assets", StaticFiles(directory=str(_assets_dir)), name="frontend-assets")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_spa(full_path: str):
         """Serve the React SPA for all non-API routes."""
+        # Don't intercept API routes
+        first_segment = full_path.split("/")[0] if full_path else ""
+        if first_segment in _API_PREFIXES:
+            from fastapi import HTTPException
+            raise HTTPException(404)
+
+        # Try to serve the exact file from dist
         file_path = _FRONTEND_DIST / full_path
-        if file_path.is_file():
+        if full_path and file_path.is_file():
             return FileResponse(str(file_path))
+
+        # SPA fallback: serve index.html for client-side routing
         return FileResponse(str(_FRONTEND_DIST / "index.html"))
