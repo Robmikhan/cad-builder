@@ -29,17 +29,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routes
-app.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
-app.include_router(assets_router, prefix="/assets", tags=["assets"])
-app.include_router(models_router, prefix="/models", tags=["models"])
-app.include_router(upload_router, prefix="/upload", tags=["upload"])
-app.include_router(stream_router, prefix="/jobs", tags=["streaming"])
+# API routes — all under /api to match frontend BASE
+app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
+app.include_router(assets_router, prefix="/api/assets", tags=["assets"])
+app.include_router(models_router, prefix="/api/models", tags=["models"])
+app.include_router(upload_router, prefix="/api/upload", tags=["upload"])
+app.include_router(stream_router, prefix="/api/jobs", tags=["streaming"])
 
 _START_TIME = time.time()
 
 
-@app.get("/health", tags=["system"])
+@app.get("/api/health", tags=["system"])
+@app.get("/health", tags=["system"], include_in_schema=False)
 def health_check():
     """Health check endpoint for monitoring and load balancers."""
     return {
@@ -51,7 +52,7 @@ def health_check():
 
 # Serve frontend static files (built React app)
 _FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
-_API_PREFIXES = ("jobs", "assets", "models", "upload", "health", "docs", "openapi.json", "redoc")
+_API_PREFIXES = ("api", "health", "docs", "openapi.json", "redoc")
 
 if _FRONTEND_DIST.exists() and (_FRONTEND_DIST / "index.html").exists():
     # Mount Vite's hashed asset bundles under /_assets to avoid conflict with /assets API
