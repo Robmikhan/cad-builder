@@ -61,6 +61,14 @@ def get_job(job_id: str, repo: Repo = Depends(get_repo)):
             pass
     return job
 
+@router.delete("/{job_id}")
+def delete_job(job_id: str, repo: Repo = Depends(get_repo)):
+    job = repo.load_job(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    repo.delete_job(job_id)
+    return {"deleted": True, "job_id": job_id}
+
 @router.get("/{job_id}/events")
 def get_job_events(job_id: str, repo: Repo = Depends(get_repo)):
     return repo.load_events(job_id)

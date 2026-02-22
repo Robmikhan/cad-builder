@@ -62,6 +62,13 @@ class Repo:
                     _log.warning("Skipping corrupted job file %s: %s", jf, e)
         return jobs
 
+    def delete_job(self, job_id: str) -> None:
+        """Delete a job and all its output files from disk."""
+        import shutil
+        job_dir = Path(self.data_dir) / "outputs" / job_id
+        if job_dir.exists():
+            shutil.rmtree(job_dir, ignore_errors=True)
+
     def load_events(self, job_id: str) -> list[dict]:
         p = Path(self.data_dir) / "outputs" / job_id / "events.jsonl"
         if not p.exists():

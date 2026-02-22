@@ -57,6 +57,18 @@ export async function fetchModels() {
   return res.json();
 }
 
+export async function deleteJob(jobId) {
+  const res = await fetch(`${BASE}/jobs/${jobId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to delete job: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function fetchHealth() {
   const res = await fetch(`${BASE}/health`);
   return res.json();

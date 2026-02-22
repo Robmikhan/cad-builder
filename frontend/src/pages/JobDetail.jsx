@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { fetchJob, fetchJobEvents, downloadBundleUrl, downloadStepUrl, downloadStlUrl, glbPreviewUrl } from '../api'
+import { fetchJob, fetchJobEvents, deleteJob, downloadBundleUrl, downloadStepUrl, downloadStlUrl, glbPreviewUrl, subscribeToEvents } from '../api'
 import '@google/model-viewer'
 import {
   ArrowLeft, Clock, CheckCircle2, XCircle, Loader2,
   Download, FileCode2, Box, Copy, Check, RefreshCw,
-  ChevronRight, AlertCircle, Eye, FileDown
+  ChevronRight, AlertCircle, Eye, FileDown, Trash2
 } from 'lucide-react'
 
 const STATUS_CONFIG = {
@@ -68,6 +68,10 @@ export default function JobDetail() {
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
 
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const unsubRef = useRef(null)
+
   const load = async () => {
     try {
       const [j, e] = await Promise.all([fetchJob(jobId), fetchJobEvents(jobId)])
@@ -83,12 +87,33 @@ export default function JobDetail() {
 
   useEffect(() => { load() }, [jobId])
 
-  // Auto-refresh while running
+  // SSE streaming for real-time updates while job is active
   useEffect(() => {
     if (!job || (job.status !== 'RUNNING' && job.status !== 'QUEUED')) return
-    const id = setInterval(load, 3000)
-    return () => clearInterval(id)
+    const unsub = subscribeToEvents(jobId, (ev) => {
+      if (ev.event_type === 'stream_end') {
+        load() // Final refresh when done
+      } else {
+        setEvents(prev => [...prev, ev])
+      }
+    })
+    unsubRef.current = unsub
+    // Also poll the job status every 5s as fallback
+    const id = setInterval(load, 5000)
+    return () => { unsub(); clearInterval(id) }
   }, [job?.status])
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteJob(jobId)
+      navigate('/dashboard')
+    } catch (e) {
+      setError(e.message)
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -149,6 +174,31 @@ export default function JobDetail() {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-red-400">Delete this job?</span>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Yes, delete'}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="px-3 py-2 rounded-lg bg-surface-lighter text-text-muted text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-lighter text-red-400 hover:bg-red-500/10 text-sm transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
           {artifacts.step_path && (
             <a
               href={downloadStepUrl(job.job_id)}
